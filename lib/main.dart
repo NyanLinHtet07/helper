@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'l10n/app_localizations.dart';
 import 'locale_provider.dart';
-import './screens/geolocation_screen.dart';
-import './screens/contact_screen.dart';
+import './services/contact_database.dart';
+import 'package:telephony_sms/telephony_sms.dart';
 import './screens/setting_screen.dart';
+import './services/location_service.dart';
 
 // void main() {
 //   runApp(const MyApp());
@@ -21,7 +22,6 @@ void main() {
 
 class AppIntializer extends StatelessWidget {
   const AppIntializer({super.key});
-
   @override
   Widget build(BuildContext context) {
     final localProvider = Provider.of<LocaleProvider>(context);
@@ -44,35 +44,62 @@ class AppIntializer extends StatelessWidget {
   }
 }
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
+
+  @override
+  _MainScreenState createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  final _telephonySMS = TelephonySMS();
+
+  Future<List<Map<String, dynamic>>> _loadSavedContacts() async {
+    return await DBHelper.getContacts();
+  }
+
+  Future<void> _sendSOS() async {
+    final savedContacts = await _loadSavedContacts();
+    final position = await LocationService.getCurrentLocation();
+    final lat = position.latitude;
+    final lng = position.longitude;
+
+    final locationUrl = "https://maps.google.com/?q=${lat},${lng}";
+
+    if (savedContacts.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("No saved SOS contacts")));
+
+      return;
+    }
+
+    final message = "SOS! I need help. My location: $locationUrl";
+
+    try {
+      for (var contact in savedContacts) {
+        await _telephonySMS.sendSMS(phone: contact['phone'], message: message);
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('SOS Send Successfully')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to send SOS: $e")));
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
 
     return Scaffold(
-      // appBar: AppBar(
-      //   // title: Text(
-      //   //   localizations?.emergencyHelper ?? 'Helper',
-      //   //   style: const TextStyle(
-      //   //     fontSize: 20,
-      //   //     fontWeight: FontWeight.bold,
-      //   //     color: Colors.red,
-      //   //   ),
-      //   // ),
-      //   // actions: [
-      //   //   IconButton(
-      //   //     onPressed: () {
-      //   //       Navigator.push(
-      //   //         context,
-      //   //         MaterialPageRoute(builder: (_) => const SettingScreen()),
-      //   //       );
-      //   //     },
-      //   //     icon: const Icon(Icons.settings, size: 28),
-      //   //   ),
-      //   // ],
-      // ),
       body: SafeArea(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -91,36 +118,17 @@ class MainScreen extends StatelessWidget {
             ),
             Expanded(
               child: Center(
-                child: Semantics(
-                  label: 'Send Help Button',
-                  button: true,
-                  child: GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            localizations?.sendEmergency ??
-                                'Emergency Alert Sent!',
-                          ),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    },
-                    child: Container(
+                child: Material(
+                  color: Colors.red,
+                  shape: CircleBorder(),
+                  elevation: 5,
+                  child: InkWell(
+                    onTap: _sendSOS,
+                    customBorder: CircleBorder(),
+                    child: SizedBox(
                       width: 200,
                       height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(100),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 10,
-                            offset: Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
                           'SOS',
                           style: TextStyle(
