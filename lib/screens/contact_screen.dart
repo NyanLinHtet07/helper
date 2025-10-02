@@ -18,6 +18,8 @@ class _ContactScreenState extends State<ContactScreen> {
   final _telephonySMS = TelephonySMS();
   int _currentIndex = 0;
 
+  String query = "";
+
   @override
   void initState() {
     super.initState();
@@ -72,52 +74,86 @@ class _ContactScreenState extends State<ContactScreen> {
     });
   }
 
-  /// Send SMS in background
-  Future<void> _autoSMS() async {
-    final numbers = selectedContacts
-        .expand((c) => c.phones.map((p) => p.number))
-        .join(', ');
-
-    const message = "I will be there";
-
-    try {
-      final numberList = numbers
-          .split(',')
-          .map((n) => n.trim())
-          .where((n) => n.isNotEmpty);
-      for (var number in numberList) {
-        await _telephonySMS.sendSMS(phone: number, message: message);
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Messages sent successfully')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to send SMS: $e')));
-    }
-  }
-
   /// Build contact list
   Widget _buildContactList() {
     if (contacts.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    return ListView.builder(
-      itemCount: contacts.length,
-      itemBuilder: (context, index) {
-        final c = contacts[index];
-        final selected = selectedContacts.contains(c);
-        return ListTile(
-          title: Text(c.displayName),
-          subtitle: Text(c.phones.isNotEmpty ? c.phones.first.number : ''),
-          trailing: Checkbox(
-            value: selected,
-            onChanged: (_) => _toggleSelection(c),
+
+    final filterdContacts = contacts
+        .where((c) => c.displayName.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+
+    filterdContacts.sort(
+      (a, b) =>
+          a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
+    );
+
+    final Map<String, List<Contact>> grouped = {};
+    for (var c in filterdContacts) {
+      final firstLetter = c.displayName.isNotEmpty
+          ? c.displayName[0].toUpperCase()
+          : "#";
+
+      grouped.putIfAbsent(firstLetter, () => []).add(c);
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            decoration: const InputDecoration(
+              hintText: "Search ...",
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              setState(() {
+                query = value;
+              });
+            },
           ),
-          onTap: () => _toggleSelection(c),
-        );
-      },
+        ),
+        Expanded(
+          child: ListView(
+            children: grouped.entries.map((entry) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    color: Colors.grey[100],
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      entry.key,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+
+                  ...entry.value.map((c) {
+                    final selected = selectedContacts.contains(c);
+                    return ListTile(
+                      title: Text(c.displayName),
+                      subtitle: Text(
+                        c.phones.isNotEmpty ? c.phones.first.number : '',
+                      ),
+                      trailing: Checkbox(
+                        value: selected,
+                        onChanged: (_) => _toggleSelection(c),
+                      ),
+                      onTap: () => _toggleSelection(c),
+                    );
+                  }),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -164,8 +200,8 @@ class _ContactScreenState extends State<ContactScreen> {
               children: [
                 FloatingActionButton(
                   heroTag: 'save',
-                  child: const Icon(Icons.save),
                   onPressed: _saveContacts,
+                  child: const Icon(Icons.save),
                 ),
                 const SizedBox(height: 20.0),
                 ElevatedButton(
@@ -175,10 +211,6 @@ class _ContactScreenState extends State<ContactScreen> {
                   child: const Text('Check Permission'),
                 ),
                 const SizedBox(height: 20.0),
-                // ElevatedButton(
-                //   onPressed: _autoSMS,
-                //   child: const Text('Send Auto SMS'),
-                // ),
               ],
             )
           : null,

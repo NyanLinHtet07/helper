@@ -90,9 +90,15 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  Future<void> _checkAndRequestPermissions() async {
+    await _telephonySMS.requestPermission();
+    // If you need to check permission status, use a different API or handle permission result elsewhere.
+  }
+
   @override
   void initState() {
     super.initState();
+    _checkAndRequestPermissions();
   }
 
   @override

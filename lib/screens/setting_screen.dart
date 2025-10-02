@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:helper_app/screens/contact_screen.dart';
+import 'package:helper_app/screens/contact_screen_new.dart';
 import 'package:helper_app/screens/geolocation_screen.dart';
 import 'package:provider/provider.dart';
 import './../locale_provider.dart';
@@ -103,7 +104,7 @@ class _SettingScreenState extends State<SettingScreen>
                   Navigator.push(
                     context,
                     PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const ContactScreen(),
+                      pageBuilder: (_, __, ___) => const ContactNewScreen(),
                       transitionsBuilder: (_, anim, __, child) {
                         return FadeTransition(opacity: anim, child: child);
                       },
