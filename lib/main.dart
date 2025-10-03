@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:helper_app/services/context_database.dart';
 import 'package:provider/provider.dart';
 import 'l10n/app_localizations.dart';
 import 'locale_provider.dart';
@@ -74,7 +75,8 @@ class _MainScreenState extends State<MainScreen> {
       return;
     }
 
-    final message = "SOS! I need help. My location: $locationUrl";
+    final baseMessage = await ContextDBHelper.getContexts();
+    final message = "$baseMessage $locationUrl";
 
     try {
       for (var contact in savedContacts) {
@@ -95,9 +97,14 @@ class _MainScreenState extends State<MainScreen> {
     // If you need to check permission status, use a different API or handle permission result elsewhere.
   }
 
+  Future<void> _loadContexts() async {
+    final notes = await ContextDBHelper.getContexts();
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadContexts();
     _checkAndRequestPermissions();
   }
 
