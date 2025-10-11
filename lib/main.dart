@@ -1,21 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:helper_app/services/context_database.dart';
 import 'package:provider/provider.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_localizations.dart';
 import 'locale_provider.dart';
-import './services/contact_database.dart';
 import 'package:telephony_sms/telephony_sms.dart';
 import './screens/setting_screen.dart';
+import './services/contact_database.dart';
 import './services/location_service.dart';
 
-// void main() {
-//   runApp(const MyApp());
-// }
+const sosTask = "sosBackgroundTask";
 
-void main() {
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    if (task == sosTask) {
+      final prefs = await SharedPreferences.getInstance();
+      final isActive = prefs.getBool('sos_active') ?? false;
+
+      if (!isActive) return Future.value(true);
+
+      final savedContacts = await DBHelper.getContacts();
+      final position = await LocationService.getCurrentLocation();
+      final lat = position.latitude;
+      final lng = position.longitude;
+      final baseMessage = await ContextDBHelper.getContexts();
+      final locationUrl = "https://maps.google.com/?q=${lat},${lng}";
+      final message = "$baseMessage $locationUrl";
+
+      final telephony = TelephonySMS();
+      for (var contact in savedContacts) {
+        await telephony.sendSMS(phone: contact['phone'], message: message);
+      }
+    }
+
+    return Future.value(true);
+  });
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
   runApp(
     ChangeNotifierProvider(
-      create: (context) => LocaleProvider(const Locale('my')),
+      create: (_) => LocaleProvider(const Locale('my')),
       child: const AppIntializer(),
     ),
   );
@@ -54,6 +82,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final _telephonySMS = TelephonySMS();
+  bool _isSOSActive = false;
 
   Future<List<Map<String, dynamic>>> _loadSavedContacts() async {
     return await DBHelper.getContacts();
@@ -94,11 +123,40 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _checkAndRequestPermissions() async {
     await _telephonySMS.requestPermission();
-    // If you need to check permission status, use a different API or handle permission result elsewhere.
   }
 
   Future<void> _loadContexts() async {
     final notes = await ContextDBHelper.getContexts();
+  }
+
+  Future<void> _checkSOSStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isSOSActive = prefs.getBool('sos_active') ?? false;
+    });
+  }
+
+  Future<void> _toggleSOS() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_isSOSActive) {
+      await Workmanager().cancelByUniqueName(sosTask);
+      await prefs.setBool('sos_active', false);
+      setState(() => _isSOSActive = false);
+    } else {
+      //Active SOS
+      await prefs.setBool('sos_active', true);
+      setState(() => _isSOSActive = true);
+
+      // Send immediately first time
+      await _sendSOS();
+
+      // Schedule repeating every minutes
+      await Workmanager().registerPeriodicTask(
+        sosTask,
+        sosTask,
+        frequency: const Duration(minutes: 15),
+      );
+    }
   }
 
   @override
@@ -106,6 +164,7 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _loadContexts();
     _checkAndRequestPermissions();
+    _checkSOSStatus();
   }
 
   @override
@@ -132,22 +191,23 @@ class _MainScreenState extends State<MainScreen> {
             Expanded(
               child: Center(
                 child: Material(
-                  color: Colors.red,
+                  color: _isSOSActive ? Colors.deepOrange : Colors.red,
                   shape: CircleBorder(),
                   elevation: 5,
                   child: InkWell(
-                    onTap: _sendSOS,
+                    onTap: _toggleSOS,
                     customBorder: CircleBorder(),
                     child: SizedBox(
                       width: 200,
                       height: 200,
                       child: Center(
                         child: Text(
-                          'SOS',
+                          _isSOSActive ? 'Emergency' : 'SOS',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 48,
+                            fontSize: 30,
                             fontWeight: FontWeight.bold,
+                            textBaseline: TextBaseline.alphabetic,
                           ),
                         ),
                       ),

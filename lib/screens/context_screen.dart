@@ -38,23 +38,21 @@ class _ContextEditScreenState extends State<ContextEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Edit SOS Message"),
-        backgroundColor: Colors.red,
-      ),
+      appBar: AppBar(title: const Text("Edit SOS Message")),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   TextField(
                     controller: _controller,
-                    maxLines: 4,
+                    maxLines: 5,
                     decoration: InputDecoration(
                       labelText: "SOS Message",
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
+                        borderRadius: BorderRadius.circular(20.0),
                       ),
                     ),
                   ),
