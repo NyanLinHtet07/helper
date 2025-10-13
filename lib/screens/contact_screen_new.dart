@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fast_contacts/fast_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:telephony_sms/telephony_sms.dart';
 import './../services/contact_database.dart';
 
 class ContactNewScreen extends StatefulWidget {
@@ -16,7 +15,6 @@ class _ContactNewScreenState extends State<ContactNewScreen> {
   List<Contact> contacts = [];
   List<Contact> selectedContacts = [];
   List<Map<String, dynamic>> savedContacts = [];
-  final _telephonySMS = TelephonySMS();
   int _currentIndex = 0;
 
   String query = "";
@@ -388,14 +386,6 @@ class _ContactNewScreenState extends State<ContactNewScreen> {
                   ),
                 ),
                 SizedBox(height: 16.0),
-                // FloatingActionButton.extended(
-                //   heroTag: 'check',
-                //   icon: const Icon(Icons.remove_red_eye),
-                //   onPressed: () async {
-                //     await _telephonySMS.requestPermission();
-                //   },
-                //   label: Text('Permissions'),
-                // ),
               ],
             )
           : null,
