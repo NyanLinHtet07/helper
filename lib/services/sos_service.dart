@@ -80,13 +80,18 @@ void onStart(ServiceInstance service) async {
     final position = await LocationService.getCurrentLocation();
     final lat = position.latitude;
     final lng = position.longitude;
-    final locationUrl = "https://maps.google.com/?q=$lat,$lng";
+    final locationUrl = "http://maps.google.com/maps?q=$lat,$lng";
     final baseMessage = await ContextDBHelper.getContexts();
     final message = "$baseMessage $locationUrl";
 
     for (var contact in savedContacts) {
-      await telephony.sendSMS(phone: contact['phone'], message: message);
-      await Future.delayed(const Duration(seconds: 3));
+      final phone = contact['phone'];
+      try {
+        await telephony.sendSMS(phone: phone, message: message);
+      } catch (e) {
+        print("Issue happened");
+      }
+      await Future.delayed(const Duration(seconds: 10));
     }
   });
 }

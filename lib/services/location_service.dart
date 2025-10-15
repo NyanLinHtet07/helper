@@ -25,7 +25,11 @@ class LocationService {
 
     // Get current position
     return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 0,
+      ),
+      // desiredAccuracy: LocationAccuracy.high,
     );
   }
 }

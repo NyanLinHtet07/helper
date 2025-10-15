@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:helper_app/screens/contact_screen.dart';
 import 'package:helper_app/screens/contact_screen_new.dart';
 import 'package:helper_app/screens/context_screen.dart';
-import 'package:helper_app/screens/geolocation_screen.dart';
 import 'package:provider/provider.dart';
 import './../locale_provider.dart';
 

@@ -86,12 +86,17 @@ class _MainScreenState extends State<MainScreen> {
     final lat = position.latitude;
     final lng = position.longitude;
     final baseMessage = await ContextDBHelper.getContexts();
-    final locationUrl = "https://maps.google.com/?q=${lat},${lng}";
+    final locationUrl = "http://maps.google.com/maps?q=$lat,$lng";
     final message = "$baseMessage $locationUrl";
 
     for (var contact in savedContacts) {
-      await _telephonySMS.sendSMS(phone: contact['phone'], message: message);
-      await Future.delayed(const Duration(seconds: 3));
+      final phone = contact['phone'];
+      try {
+        await _telephonySMS.sendSMS(phone: phone, message: message);
+      } catch (e) {
+        print("Issue happened");
+      }
+      await Future.delayed(const Duration(seconds: 10));
     }
   }
 
