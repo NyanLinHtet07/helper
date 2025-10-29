@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_background_service_android/flutter_background_service_android.dart';
-import 'package:telephony_sms/telephony_sms.dart';
+import 'package:another_telephony/telephony.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import './location_service.dart';
 import './context_database.dart';
@@ -15,9 +14,14 @@ Future<void> initializeService() async {
     androidConfiguration: AndroidConfiguration(
       onStart: onStart,
       isForegroundMode: true,
-      autoStart: true,
+      autoStart: false,
+      notificationChannelId: 'sos_service',
       initialNotificationTitle: "SOS Emergency",
       initialNotificationContent: "Sending SOS messages every 3 min",
+      foregroundServiceTypes: [
+        AndroidForegroundType.dataSync,
+        AndroidForegroundType.location,
+      ],
     ),
     iosConfiguration: IosConfiguration(),
   );
@@ -26,16 +30,15 @@ Future<void> initializeService() async {
 /// Background service entry point
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
-  // Requerst for all plugins in background
   DartPluginRegistrant.ensureInitialized();
 
-  final telephony = TelephonySMS();
-  final prefs = await SharedPreferences.getInstance();
+  final telephony = Telephony.instance;
+  //final prefs = await SharedPreferences.getInstance();
   bool isRunning = true;
 
   if (service is AndroidServiceInstance) {
-    service.setAsForegroundService();
-    service.setForegroundNotificationInfo(
+    await service.setAsForegroundService();
+    await service.setForegroundNotificationInfo(
       title: "SOS Emergency",
       content: "Sending SOS messages every 3 min",
     );
@@ -44,31 +47,35 @@ void onStart(ServiceInstance service) async {
   // Listen for stop commands from main app
   service.on('stopService').listen((event) async {
     isRunning = false;
+    final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('sos_active', false);
-    if (service is AndroidServiceInstance) {
-      await service.setForegroundNotificationInfo(
-        title: "SOS Stopped",
-        content: "Background SOS Stopped",
-      );
-    }
-    service.stopSelf();
+    // if (service is AndroidServiceInstance) {
+    //   await service.setForegroundNotificationInfo(
+    //     title: "SOS Stopped",
+    //     content: "Background SOS Stopped",
+    //   );
+    // }
+    await service.stopSelf();
   });
 
   Timer.periodic(const Duration(minutes: 3), (timer) async {
-    if (!isRunning) {
+    final prefs = await SharedPreferences.getInstance();
+    final isActive = prefs.getBool('sos_active') ?? true;
+
+    if (!isRunning || !isActive) {
       timer.cancel();
+      await service.stopSelf();
       return;
     }
 
-    final isActive = prefs.getBool('sos_active') ?? false;
-    if (!isActive) {
-      timer.cancel();
-      service.stopSelf();
-      return;
-    }
+    // if (!isActive) {
+    //   timer.cancel();
+    //   service.stopSelf();
+    //   return;
+    // }
 
     if (service is AndroidServiceInstance) {
-      service.setForegroundNotificationInfo(
+      await service.setForegroundNotificationInfo(
         title: "SOS Active",
         content: "Last message sent at ${DateTime.now()}",
       );
@@ -77,21 +84,25 @@ void onStart(ServiceInstance service) async {
     final savedContacts = await DBHelper.getContacts();
     if (savedContacts.isEmpty) return;
 
-    final position = await LocationService.getCurrentLocation();
-    final lat = position.latitude;
-    final lng = position.longitude;
-    final locationUrl = "http://maps.google.com/maps?q=$lat,$lng";
-    final baseMessage = await ContextDBHelper.getContexts();
-    final message = "$baseMessage $locationUrl";
+    try {
+      final position = await LocationService.getCurrentLocation();
+      final lat = position.latitude;
+      final lng = position.longitude;
+      final locationUrl = "http://maps.google.com/maps?q=$lat,$lng";
+      final baseMessage = await ContextDBHelper.getContexts();
+      final message = "$baseMessage $locationUrl";
 
-    for (var contact in savedContacts) {
-      final phone = contact['phone'];
-      try {
-        await telephony.sendSMS(phone: phone, message: message);
-      } catch (e) {
-        print("Issue happened");
+      for (var contact in savedContacts) {
+        final phone = contact['phone'];
+        try {
+          await telephony.sendSms(to: phone, message: message);
+        } catch (e) {
+          print("Issue happened");
+        }
+        await Future.delayed(const Duration(seconds: 20));
       }
-      await Future.delayed(const Duration(seconds: 10));
+    } catch (e) {
+      print("Error during SOS cycle: $e");
     }
   });
 }

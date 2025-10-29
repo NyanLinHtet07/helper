@@ -72,6 +72,11 @@ class _ContactNewScreenState extends State<ContactNewScreen> {
     });
   }
 
+  Future<void> _deleteContacts(int id) async {
+    await DBHelper.deleteContact(id);
+    await _loadSavedContacts();
+  }
+
   /// Toggle contact selection
   void _toggleSelection(Contact contact) {
     setState(() {
@@ -320,6 +325,8 @@ class _ContactNewScreenState extends State<ContactNewScreen> {
         final c = savedContacts[index];
         final display = (c['name'] ?? '') as String;
         final phone = (c['phone'] ?? '') as String;
+        final id = c['id'] as int;
+
         final initials = display.isNotEmpty
             ? display
                   .trim()
@@ -333,8 +340,17 @@ class _ContactNewScreenState extends State<ContactNewScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: ListTile(
             leading: CircleAvatar(child: Text(initials)),
-            title: Text(display, style: TextStyle(fontSize: 16.0)),
-            subtitle: Text(phone, style: TextStyle(fontSize: 14.0)),
+            title: Text(display, style: TextStyle(fontSize: 14.0)),
+            subtitle: Text(phone, style: TextStyle(fontSize: 12.0)),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () async {
+                await _deleteContacts(id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Contact Deleted')),
+                );
+              },
+            ),
           ),
         );
       },

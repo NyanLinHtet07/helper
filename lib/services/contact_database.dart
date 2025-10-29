@@ -39,6 +39,15 @@ class DBHelper {
     });
   }
 
+  static Future<int> deleteContact(int id) async {
+    final dbClient = await db;
+    return await dbClient.delete(
+      "selected_contacts",
+      where: "id = ?",
+      whereArgs: [id],
+    );
+  }
+
   static Future<List<Map<String, dynamic>>> getContacts() async {
     final dbClient = await db;
     return await dbClient.query("selected_contacts");

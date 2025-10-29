@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_localizations.dart';
 import 'locale_provider.dart';
-import 'package:telephony_sms/telephony_sms.dart';
+import 'package:another_telephony/telephony.dart';
+import 'package:permission_handler/permission_handler.dart';
 import './screens/setting_screen.dart';
 import './services/contact_database.dart';
 import './services/location_service.dart';
@@ -13,7 +14,6 @@ import './services/sos_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await initializeService();
 
   runApp(
@@ -33,7 +33,9 @@ class AppIntializer extends StatelessWidget {
     return MaterialApp(
       title: 'Emergency SOS',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 211, 0, 0),
+        ),
         useMaterial3: true,
         textTheme: const TextTheme(
           bodyLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -56,13 +58,26 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  final _telephonySMS = TelephonySMS();
+  final Telephony _telephonySMS = Telephony.instance;
   bool _isSOSActive = false;
+
+  Future<bool> _requestSmsPermission() async {
+    var status = await Permission.sms.status;
+
+    if (status.isGranted) {
+      return true;
+    }
+
+    if (status.isDenied || status.isRestricted || status.isLimited) {
+      status = await Permission.sms.request();
+    }
+
+    return status.isGranted;
+  }
 
   @override
   void initState() {
     super.initState();
-    _telephonySMS.requestPermission();
     _checkSOSStatus();
   }
 
@@ -82,6 +97,7 @@ class _MainScreenState extends State<MainScreen> {
       return;
     }
 
+    final hasSmsPermission = await _requestSmsPermission();
     final position = await LocationService.getCurrentLocation();
     final lat = position.latitude;
     final lng = position.longitude;
@@ -89,10 +105,16 @@ class _MainScreenState extends State<MainScreen> {
     final locationUrl = "http://maps.google.com/maps?q=$lat,$lng";
     final message = "$baseMessage $locationUrl";
 
+    if (!hasSmsPermission) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("SMS permission is required")),
+      );
+      return;
+    }
     for (var contact in savedContacts) {
       final phone = contact['phone'];
       try {
-        await _telephonySMS.sendSMS(phone: phone, message: message);
+        await _telephonySMS.sendSms(to: phone, message: message);
       } catch (e) {
         print("Issue happened");
       }
