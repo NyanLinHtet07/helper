@@ -10,7 +10,8 @@ import 'package:permission_handler/permission_handler.dart';
 import './screens/setting_screen.dart';
 import './services/contact_database.dart';
 import './services/location_service.dart';
-import './services/sos_service.dart';
+//import './services/sos_service.dart';
+import './services/sos_message_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,10 +76,17 @@ class _MainScreenState extends State<MainScreen> {
     return status.isGranted;
   }
 
+  Future<void> _requestBatteryOptimization() async {
+    if (await Permission.ignoreBatteryOptimizations.isDenied) {
+      await Permission.ignoreBatteryOptimizations.request();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _checkSOSStatus();
+    _requestBatteryOptimization();
   }
 
   Future<void> _checkSOSStatus() async {
@@ -98,6 +106,13 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     final hasSmsPermission = await _requestSmsPermission();
+    if (!hasSmsPermission) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("SMS permission is required")),
+      );
+      return;
+    }
+
     final position = await LocationService.getCurrentLocation();
     final lat = position.latitude;
     final lng = position.longitude;
@@ -105,12 +120,6 @@ class _MainScreenState extends State<MainScreen> {
     final locationUrl = "http://maps.google.com/maps?q=$lat,$lng";
     final message = "$baseMessage $locationUrl";
 
-    if (!hasSmsPermission) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("SMS permission is required")),
-      );
-      return;
-    }
     for (var contact in savedContacts) {
       final phone = contact['phone'];
       try {
@@ -122,31 +131,54 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  // Future<void> _toggleSOS() async {
+  //   final service = FlutterBackgroundService();
+  //   final prefs = await SharedPreferences.getInstance();
+
+  //   if (_isSOSActive) {
+  //     service.invoke('stopService');
+
+  //     await prefs.setBool('sos_active', false);
+  //     setState(() => _isSOSActive = false);
+
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(const SnackBar(content: Text("SOS Deactivated")));
+  //   } else {
+  //     //Active SOS
+  //     await prefs.setBool('sos_active', true);
+  //     setState(() => _isSOSActive = true);
+
+  //     // Send immediately first time
+  //     await _sendImmediateSOS();
+  //     await service.startService();
+
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(const SnackBar(content: Text("SOS Activated")));
+  //   }
+  // }
+
   Future<void> _toggleSOS() async {
     final service = FlutterBackgroundService();
     final prefs = await SharedPreferences.getInstance();
+    final isActive = prefs.getBool('sos_active') ?? false;
 
-    if (_isSOSActive) {
-      service.invoke('stopService');
-
+    if (isActive) {
       await prefs.setBool('sos_active', false);
+      service.invoke('stopService');
       setState(() => _isSOSActive = false);
-
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("SOS Deactivated")));
+      ).showSnackBar(const SnackBar(content: Text("SOS stopped")));
     } else {
-      //Active SOS
       await prefs.setBool('sos_active', true);
-      setState(() => _isSOSActive = true);
-
-      // Send immediately first time
       await _sendImmediateSOS();
-      await service.startService();
-
+      service.startService();
+      setState(() => _isSOSActive = true);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("SOS Activated")));
+      ).showSnackBar(const SnackBar(content: Text("SOS started")));
     }
   }
 
