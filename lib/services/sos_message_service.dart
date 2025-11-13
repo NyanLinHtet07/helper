@@ -33,7 +33,6 @@ Future<void> initializeService() async {
       isForegroundMode: true,
       autoStart: false,
       autoStartOnBoot: true,
-      //notificationChannelId: 'sos_channel',
       initialNotificationTitle: "SOS Emergency Active",
       initialNotificationContent: "Sending SOS every 3 minutes",
       foregroundServiceTypes: [
@@ -50,6 +49,12 @@ void onStart(ServiceInstance service) async {
 
   final telephony = Telephony.instance;
   final prefs = await SharedPreferences.getInstance();
+
+  final active = prefs.getBool('sos_active') ?? false;
+  if (!active) {
+    service.stopSelf();
+    return;
+  }
 
   if (service is AndroidServiceInstance) {
     service.setAsForegroundService();

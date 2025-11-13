@@ -77,7 +77,8 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _requestBatteryOptimization() async {
-    if (await Permission.ignoreBatteryOptimizations.isDenied) {
+    final status = await Permission.ignoreBatteryOptimizations.status;
+    if (status.isDenied || status.isRestricted) {
       await Permission.ignoreBatteryOptimizations.request();
     }
   }
@@ -131,34 +132,6 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // Future<void> _toggleSOS() async {
-  //   final service = FlutterBackgroundService();
-  //   final prefs = await SharedPreferences.getInstance();
-
-  //   if (_isSOSActive) {
-  //     service.invoke('stopService');
-
-  //     await prefs.setBool('sos_active', false);
-  //     setState(() => _isSOSActive = false);
-
-  //     ScaffoldMessenger.of(
-  //       context,
-  //     ).showSnackBar(const SnackBar(content: Text("SOS Deactivated")));
-  //   } else {
-  //     //Active SOS
-  //     await prefs.setBool('sos_active', true);
-  //     setState(() => _isSOSActive = true);
-
-  //     // Send immediately first time
-  //     await _sendImmediateSOS();
-  //     await service.startService();
-
-  //     ScaffoldMessenger.of(
-  //       context,
-  //     ).showSnackBar(const SnackBar(content: Text("SOS Activated")));
-  //   }
-  // }
-
   Future<void> _toggleSOS() async {
     final service = FlutterBackgroundService();
     final prefs = await SharedPreferences.getInstance();
@@ -166,7 +139,8 @@ class _MainScreenState extends State<MainScreen> {
 
     if (isActive) {
       await prefs.setBool('sos_active', false);
-      service.invoke('stopService');
+      //service.invoke('stopService');
+      await service.startService();
       setState(() => _isSOSActive = false);
       ScaffoldMessenger.of(
         context,
@@ -208,10 +182,13 @@ class _MainScreenState extends State<MainScreen> {
                 child: Material(
                   color: _isSOSActive ? Colors.deepOrange : Colors.red,
                   shape: CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
                   elevation: 5,
                   child: InkWell(
                     onTap: _toggleSOS,
                     customBorder: CircleBorder(),
+                    splashColor: Colors.redAccent.shade400,
+                    highlightColor: Colors.redAccent.shade100,
                     child: SizedBox(
                       width: 200,
                       height: 200,

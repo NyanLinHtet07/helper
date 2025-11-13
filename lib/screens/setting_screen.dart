@@ -126,29 +126,6 @@ class _SettingScreenState extends State<SettingScreen>
                   );
                 },
               ),
-              // _buildSettingTile(
-              //   icon: Icons.location_on,
-              //   title: 'Location',
-              //   onTap: () {
-              //     Navigator.push(
-              //       context,
-              //       PageRouteBuilder(
-              //         pageBuilder: (_, __, ___) => const GeolocationScreen(),
-              //         transitionsBuilder: (_, anim, __, child) {
-              //           return ScaleTransition(
-              //             scale: Tween<double>(begin: 0.9, end: 1.0).animate(
-              //               CurvedAnimation(
-              //                 parent: anim,
-              //                 curve: Curves.easeOut,
-              //               ),
-              //             ),
-              //             child: child,
-              //           );
-              //         },
-              //       ),
-              //     );
-              //   },
-              // ),
             ],
           ),
         ),

@@ -5,10 +5,10 @@ class ContextEditScreen extends StatefulWidget {
   const ContextEditScreen({super.key});
 
   @override
-  _ContextEditScreenState createState() => _ContextEditScreenState();
+  ContextEditScreenState createState() => ContextEditScreenState();
 }
 
-class _ContextEditScreenState extends State<ContextEditScreen> {
+class ContextEditScreenState extends State<ContextEditScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = true;
 

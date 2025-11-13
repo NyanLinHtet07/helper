@@ -8,10 +8,10 @@ class ContactNewScreen extends StatefulWidget {
   const ContactNewScreen({super.key});
 
   @override
-  _ContactNewScreenState createState() => _ContactNewScreenState();
+  ContactNewScreenState createState() => ContactNewScreenState();
 }
 
-class _ContactNewScreenState extends State<ContactNewScreen> {
+class ContactNewScreenState extends State<ContactNewScreen> {
   List<Contact> contacts = [];
   List<Contact> selectedContacts = [];
   List<Map<String, dynamic>> savedContacts = [];
