@@ -138,14 +138,18 @@ class _MainScreenState extends State<MainScreen> {
     final isActive = prefs.getBool('sos_active') ?? false;
 
     if (isActive) {
+      //stop service
+
       await prefs.setBool('sos_active', false);
-      //service.invoke('stopService');
-      await service.startService();
+      service.invoke('stopService');
+      //await service.startService();
       setState(() => _isSOSActive = false);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("SOS stopped")));
     } else {
+      //start service
+
       await prefs.setBool('sos_active', true);
       await _sendImmediateSOS();
       service.startService();

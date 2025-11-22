@@ -32,7 +32,7 @@ Future<void> initializeService() async {
       onStart: onStart,
       isForegroundMode: true,
       autoStart: false,
-      autoStartOnBoot: true,
+      autoStartOnBoot: false,
       initialNotificationTitle: "SOS Emergency Active",
       initialNotificationContent: "Sending SOS every 3 minutes",
       foregroundServiceTypes: [
@@ -46,6 +46,10 @@ Future<void> initializeService() async {
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
+
+  service.on('stopService').listen((event) {
+    service.stopSelf();
+  });
 
   final telephony = Telephony.instance;
   final prefs = await SharedPreferences.getInstance();
